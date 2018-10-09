@@ -1,9 +1,80 @@
 const Joi = require('joi');
-const Observation = require('../models/Observation');
+const { Observation, schema } = require('../models/Observation');
 const { CodableConcept } = require('../models/CodableConcept');
 const { EffectivePeriod } = require('../models/EffectivePeriod');
 const { Reference } = require('../models/Reference');
 const { ValueQuantity } = require('../models/ValueQuantity');
+
+const sanitizeObservation = (obs) => {
+  const {
+    _id,
+    value,
+    effective,
+    resourceType,
+    subject,
+    basedOn,
+    context,
+    performer,
+    status,
+    code,
+    category,
+    issued,
+    dataAbsentReason,
+  } = obs;
+
+  return {
+    id: _id,
+    resourceType,
+    code,
+    category,
+    issued,
+    subject,
+    basedOn,
+    [effective]: obs[effective],
+    context,
+    performer,
+    status,
+    [value]: obs[value],
+    dataAbsentReason,
+  };
+};
+
+const getDateOperator = op => `$${op}`;
+
+module.exports.findAll = async (req, res) => {
+  let query = {};
+
+  const { patient, code, date, ...rest } = req.query;
+
+  if (patient) query = { ...query, 'subject.reference': `Patient/${req.query.patient}` };
+
+  if (code) {
+    query = {
+      ...query,
+      'code.coding': { $elemMatch: { code: { $in: code.split(',') } } },
+    };
+  }
+
+  if (date) {
+    const operator = date.slice(0, 2);
+    const dateVal = date.slice(2);
+    query = { ...query, effectiveDate: { [getDateOperator(operator)]: dateVal } };
+  }
+
+  const observations = await Observation.find(query);
+
+  const resp = observations.map(obs => sanitizeObservation(obs));
+
+  return res.json(resp);
+};
+
+module.exports.findOne = async (req, res) => {
+  const { id } = req.params;
+  const observation = await Observation.findById(id);
+  const resp = sanitizeObservation(observation);
+  return res.json(resp);
+};
+
 
 module.exports.create = async (req, res) => {
   const {
@@ -29,45 +100,6 @@ module.exports.create = async (req, res) => {
 
   let effective = null;
   let value = null;
-
-  const codingSchema = Joi.object().keys({
-    code: Joi.string().required(),
-    system: Joi.string().uri(),
-    display: Joi.string().required(),
-  });
-
-  const codableConceptJoiSchema = Joi.object().keys({
-    coding: Joi.array().items(codingSchema),
-  });
-
-  const referenceJoiSchema = Joi.object().keys({
-    reference: Joi.string().min(3),
-  });
-
-  const schema = Joi.object().keys({
-    resourceType: Joi.string().min(3),
-    subject: referenceJoiSchema,
-    performer: referenceJoiSchema,
-    issued: Joi.date(),
-    basedOn: referenceJoiSchema,
-    context: referenceJoiSchema,
-    category: Joi.array().items(codableConceptJoiSchema),
-    status: Joi.string().valid('preliminary', 'registered', 'final', 'amended'),
-    code: codableConceptJoiSchema,
-    valueString: Joi.string().allow(null).min(3),
-    effectiveDate: Joi.date(),
-    effectivePeriod: Joi.object().keys({
-      start: Joi.date(),
-      end: Joi.date(),
-    }),
-    valueQuantity: Joi.object().keys({
-      value: Joi.number(),
-      unit: Joi.string().valid('cm', 'mm', 'ml', 'lbs'),
-    }),
-    valueCodableQuantity: codableConceptJoiSchema,
-    valueBoolean: Joi.bool(),
-    dataAbsentReason: codableConceptJoiSchema,
-  });
 
   const validation = Joi.validate(req.body, schema);
 

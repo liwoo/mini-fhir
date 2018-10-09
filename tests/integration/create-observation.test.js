@@ -1,5 +1,5 @@
 const request = require('supertest');
-const Observation = require('../../models/Observation');
+const { Observation } = require('../../models/Observation');
 const { CodableConcept } = require('../../models/CodableConcept');
 
 let server;
@@ -12,13 +12,14 @@ const createData = (overrides = {}, withValueString = true) => {
     valueString: withValueString ? 'Headache' : null
   }
 }
+
 describe('create observation test', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     Observation.remove();
-    server = require('../../index');
+    server = await require('../../index');
   })
 
-  afterEach(() => { server.close(); })
+  afterEach(async () => { await server.close(); })
 
   it('allows user to create fields', async () => {
     const data = {

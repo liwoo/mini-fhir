@@ -1,17 +1,8 @@
 const express = require('express');
-const winston = require('winston');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const observationRoutes = require('./routes/observation');
-
-const logger = winston.createLogger({
-  level: 'info',
-  format: winston.format.combine(
-    winston.format.colorize(),
-    winston.format.simple(),
-  ),
-  transports: [new winston.transports.Console()],
-});
+const logger = require('./config/logging');
 
 mongoose.connect('mongodb://localhost/mini-fhir-test')
   .then(() => logger.info('MongoDB Connects'))
