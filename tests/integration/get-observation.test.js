@@ -1,5 +1,6 @@
-const { makeObservations } = require('../../factories');
+const { makeObservations, makePatients } = require('../../factories');
 const { Observation } = require('../../models/Observation');
+const { Patient } = require('../../models/Patient');
 const request = require('supertest');
 
 let server;
@@ -8,9 +9,12 @@ describe('Get Observation', () => {
   beforeEach(async () => {
     server = await require('../../index');
     await Observation.remove();
+    await makePatients(5);
   });
 
   afterEach(async () => {
+    await Observation.remove();
+    await Patient.remove();
     await server.close();
   });
 

@@ -1,0 +1,4 @@
+{
+  "mongo_url": "mongodb://localhost/mini-fhir",
+  "mongo_test_url": "mongodb://localhost/mini-fhir"
+}

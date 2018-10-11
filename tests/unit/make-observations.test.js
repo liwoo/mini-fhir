@@ -1,13 +1,15 @@
+const config = require('config');
 const { makeObservations } = require('../../factories');
 const { Observation } = require('../../models/Observation');
 const mongoose = require('mongoose');
-const logger = require('../../config/logging');
+const { logger } = require('../../config/logging');
 
 describe('Make Observations Factory', () => {
   beforeEach(async () => {
-    await mongoose.connect('mongodb://localhost/mini-fhir-test')
-      .then(() => logger.info('MongoDB Connects'))
-      .catch(() => logger.emerg('Mongo Could not Connect'));
+    await mongoose
+      .connect(config.get('mongo_url'))
+      .then(() => logger.info('MongoDB Connects \u{1F4BB}'))
+      .catch(() => logger.emerg('Mongo Could not Connect \u{1F613}'));
   });
 
   afterEach(async () => {

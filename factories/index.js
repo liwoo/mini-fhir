@@ -1,5 +1,6 @@
 const faker = require('faker');
 const { Observation } = require('../models/Observation');
+const { Patient } = require('../models/Patient');
 
 const randomFrom = (options) => {
   const index = Math.ceil(Math.random(options.length) * options.length) - 1;
@@ -7,6 +8,8 @@ const randomFrom = (options) => {
 };
 
 const genRandomNumber = factor => Math.ceil(Math.random(factor) * 2334);
+
+const genRandomIndex = factor => Math.ceil(Math.random(factor) * factor) - 1;
 
 const basedOnOptions = [
   'CarePlan',
@@ -18,31 +21,11 @@ const basedOnOptions = [
   'ReferalRequest',
 ];
 
-const subjectOptions = [
-  'Patient',
-  'Group',
-  'Device',
-  'Location',
-];
+const statusOptions = ['registered', 'preliminary', 'final', 'amended'];
 
-const statusOptions = [
-  'registered',
-  'preliminary',
-  'final',
-  'amended',
-];
+const contextOptions = ['Encounter', 'EpisodeOfCare'];
 
-const contextOptions = [
-  'Encounter',
-  'EpisodeOfCare',
-];
-
-const performerOptions = [
-  'Practitioner',
-  'Organization',
-  'Patient',
-  'RelatedPerson',
-];
+const performerOptions = ['Practitioner', 'Organization', 'Patient', 'RelatedPerson'];
 
 const randomStartDate = faker.date.between('2001-01-16', new Date());
 
@@ -63,43 +46,57 @@ const valueOptions = [
   {
     key: 'valueCodableQuantity',
     value: {
-      coding: [{
-        code: faker.internet.mac(),
-        system: faker.internet.url(),
-        display: faker.name.findName(),
-      }],
+      coding: [
+        {
+          code: faker.internet.mac(),
+          system: faker.internet.url(),
+          display: faker.name.findName(),
+        },
+      ],
     },
   },
   { key: 'valueQuantity', value: { value: genRandomNumber(10), unit: 'cm' } },
 ];
 
+const makePatients = async (instance = 1) => {
+  const patientData = [...Array(instance).keys()].map(_i => ({ name: faker.name.findName() }));
+
+  const patient = await Patient.collection.insertMany(patientData);
+  return patient;
+};
 
 const makeObservations = async (instance = 1, overrides = {}) => {
+  const patients = await Patient.find({});
   const observationData = [...Array(instance).keys()].map((i) => {
+    const patientCount = patients.length;
+    const randomPatient = patients[genRandomIndex(patientCount)] || { _id: 1 };
+    const { _id } = randomPatient;
     const code = genRandomNumber(i);
     const eff = randomFrom(effectiveOptions);
     const val = randomFrom(valueOptions);
     return {
-      subject: { reference: `${randomFrom(subjectOptions)}/${genRandomNumber(10)}` },
+      subject: { reference: `Patient/${_id}` },
       basedOn: { reference: randomFrom(basedOnOptions) },
       context: { reference: randomFrom(contextOptions) },
       performer: { reference: `${randomFrom(performerOptions)}/${genRandomNumber(14)}` },
       resourceType: 'Observation',
       code: {
         coding: [
-          { code, system: faker.internet.url(), display: faker.name.findName() },
+          { code: String(code), system: faker.internet.url(), display: faker.name.findName() },
         ],
       },
       category: [
         {
-          coding: [{
-            code: code + 5121,
-            system: faker.internet.url(),
-            display: faker.name.jobTitle(),
-          }],
+          coding: [
+            {
+              code: `CO-${code + 5121}`,
+              system: faker.internet.url(),
+              display: faker.name.jobTitle(),
+            },
+          ],
         },
       ],
-      issued: faker.date,
+      issued: randomStartDate,
       status: randomFrom(statusOptions),
       effective: eff.effective,
       [eff.effective]: eff.value,
@@ -114,4 +111,5 @@ const makeObservations = async (instance = 1, overrides = {}) => {
 
 module.exports = {
   makeObservations,
+  makePatients,
 };
