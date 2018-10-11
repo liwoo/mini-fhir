@@ -44,7 +44,13 @@ const getDateOperator = op => `$${op}`;
 module.exports.findAll = async (req, res) => {
   let query = {};
 
-  const { patient, code, date, ...rest } = req.query;
+  const {
+    patient, code, date, ...rest
+  } = req.query;
+
+  if (Object.keys(rest).length > 0) {
+    return res.status(400).send('Invalid Query Parameter Provided.');
+  }
 
   if (patient) query = { ...query, 'subject.reference': `Patient/${req.query.patient}` };
 
@@ -58,14 +64,38 @@ module.exports.findAll = async (req, res) => {
   if (date) {
     const operator = date.slice(0, 2);
     const dateVal = date.slice(2);
-    query = { ...query, effectiveDate: { [getDateOperator(operator)]: dateVal } };
+    query = {
+      ...query,
+      effectiveDate: { [getDateOperator(operator)]: dateVal },
+    };
   }
 
   const observations = await Observation.find(query);
 
-  const resp = observations.map(obs => sanitizeObservation(obs));
+  const isNotSearched = Object.keys(query).length === 0;
 
-  return res.json(resp);
+  const resp = observations.map((obs) => {
+    const { _id } = obs;
+    return {
+      fullUrl: `${req.headers.host}/fhir/Observation/${_id}`,
+      resource: sanitizeObservation(obs),
+    };
+  });
+
+  const genericResponse = {
+    resourceType: 'Bundle',
+    type: isNotSearched ? 'collection' : 'searchset',
+    entry: resp,
+  };
+
+  if (isNotSearched) {
+    return res.json(genericResponse);
+  }
+
+  return res.json({
+    ...genericResponse,
+    total: resp.length,
+  });
 };
 
 module.exports.findOne = async (req, res) => {
@@ -74,7 +104,6 @@ module.exports.findOne = async (req, res) => {
   const resp = sanitizeObservation(observation);
   return res.json(resp);
 };
-
 
 module.exports.create = async (req, res) => {
   const {
@@ -120,7 +149,9 @@ module.exports.create = async (req, res) => {
   }
 
   if (!value && !dataAbsentReason) {
-    return res.status(422).json({ validationError: 'Both Value and Data Absent Reason Cannot be Blank' });
+    return res.status(422).json({
+      validationError: 'Both Value and Data Absent Reason Cannot be Blank',
+    });
   }
 
   let observation = new Observation({

@@ -11,18 +11,18 @@ describe('Get Observation', () => {
   });
 
   afterEach(async () => {
-    await server.close()
+    await server.close();
   });
 
   it('allows user to get all observations', async () => {
     await makeObservations(10);
     const res = await request(server).get('/fhir/Observation');
     expect(res.status).toBe(200);
-    expect(res.body.length).toBe(10)
+    expect(res.body.entry.length).toBe(10);
   });
 
   it('allows user to get observations with default effective and value', async () => {
-    const now = new Date;
+    const now = new Date();
 
     await makeObservations(1, {
       value: 'valueString',
@@ -33,9 +33,9 @@ describe('Get Observation', () => {
 
     const res = await request(server).get('/fhir/Observation');
     expect(res.status).toBe(200);
-    expect(res.body[0].valueString).toBe('Fever');
-    expect(res.body[0].effectiveDate).toBe(now.toISOString());
-  })
+    expect(res.body.entry[0].resource.valueString).toBe('Fever');
+    expect(res.body.entry[0].resource.effectiveDate).toBe(now.toISOString());
+  });
 
   it('allows user to get specific observation', async () => {
     const observation = await makeObservations(1, {
@@ -51,44 +51,50 @@ describe('Get Observation', () => {
   it('allows user to query for all observations for a specific patient', async () => {
     await makeObservations(3);
     await makeObservations(1, {
-      subject: { reference: 'Patient/123' }
+      subject: { reference: 'Patient/123' },
     });
 
     const res = await request(server).get('/fhir/Observation?patient=123');
     expect(res.status).toBe(200);
-    expect(res.body[0].subject.reference).toBe('Patient/123');
+    expect(res.body.entry[0].resource.subject.reference).toBe('Patient/123');
   });
 
   it('allows user to query for all observations of a specific code', async () => {
     await makeObservations(3);
     await makeObservations(1, {
       code: {
-        coding: [{ code: '8480-6', system: 'http://loinc.org', display: 'Systolic blood pressure' }],
-      }
+        coding: [
+          { code: '8480-6', system: 'http://loinc.org', display: 'Systolic blood pressure' },
+        ],
+      },
     });
     const res = await request(server).get('/fhir/Observation?code=8480-6');
     expect(res.status).toBe(200);
-    expect(res.body[0].code.coding.filter(coding => coding.code === '8480-6').length).toBeGreaterThan(0);
+    expect(
+      res.body.entry[0].resource.code.coding.filter(coding => coding.code === '8480-6').length,
+    ).toBeGreaterThan(0);
   });
 
   it('allows user to query for all observations that have any one of provided codes', async () => {
     await makeObservations(3);
     await makeObservations(1, {
       code: {
-        coding: [{ code: '8480-6', system: 'http://loinc.org', display: 'Systolic blood pressure' }],
-      }
+        coding: [
+          { code: '8480-6', system: 'http://loinc.org', display: 'Systolic blood pressure' },
+        ],
+      },
     });
     await makeObservations(3);
     await makeObservations(1, {
       code: {
         coding: [{ code: '9279-1', system: 'http://loinc.org', display: 'Respiratory Rate' }],
-      }
+      },
     });
     await makeObservations(3);
 
     const res = await request(server).get('/fhir/Observation?code=8480-6,9279-1');
     expect(res.status).toBe(200);
-    expect(res.body.length).toBe(2);
+    expect(res.body.entry.length).toBe(2);
   });
 
   it('allows users to query for all observations before a certain date', async () => {
@@ -102,11 +108,11 @@ describe('Get Observation', () => {
     await makeObservations(1, {
       effectiveDate: oldDate,
       effective: 'effectiveDate',
-    })
+    });
 
     const res = await request(server).get('/fhir/Observation?date=lt2001-01-01');
     expect(res.status).toBe(200);
-    expect(res.body.length).toBe(1);
+    expect(res.body.entry.length).toBe(1);
   });
 
   it('allows users to query for all observations after a certain date', async () => {
@@ -120,11 +126,43 @@ describe('Get Observation', () => {
     await makeObservations(1, {
       effectiveDate: oldDate,
       effective: 'effectiveDate',
-    })
+    });
 
     const res = await request(server).get('/fhir/Observation?date=gt2001-01-01');
     expect(res.status).toBe(200);
-    expect(res.body.length).toBe(3);
+    expect(res.body.entry.length).toBe(3);
   });
 
+  it('allows user to get back data as a bundle with type of collection', async () => {
+    await makeObservations(3);
+
+    const res = await request(server).get('/fhir/Observation');
+    expect(res.status).toBe(200);
+    expect(res.body.resourceType).toBe('Bundle');
+    expect(res.body.type).toBe('collection');
+  });
+
+  it('allows user to get back a bundle of type searchset if there are search params', async () => {
+    await makeObservations(3);
+
+    const res = await request(server).get('/fhir/Observation?patient=1234');
+    expect(res.status).toBe(200);
+    expect(res.body.resourceType).toBe('Bundle');
+    expect(res.body.type).toBe('searchset');
+  });
+
+  it('allows user to get back total number of search matches', async () => {
+    await makeObservations(3);
+
+    const res = await request(server).get('/fhir/Observation?patient=1234');
+    expect(res.status).toBe(200);
+    expect(res.body.total).toBe(0);
+  });
+
+  it('returns a 400 status code if the parameter is invalid', async () => {
+    await makeObservations(3);
+
+    const res = await request(server).get('/fhir/Observation?patiens=1234');
+    expect(res.status).toBe(400);
+  });
 });
