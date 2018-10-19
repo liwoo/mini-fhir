@@ -45,7 +45,7 @@ module.exports.findAll = async (req, res) => {
   let query = {};
 
   const {
-    patient, code, date, ...rest
+    patient, code, date, category, ...rest
   } = req.query;
 
   if (Object.keys(rest).length > 0) {
@@ -58,6 +58,13 @@ module.exports.findAll = async (req, res) => {
     query = {
       ...query,
       'code.coding': { $elemMatch: { code: { $in: code.split(',') } } },
+    };
+  }
+
+  if (category) {
+    query = {
+      ...query,
+      category: { $elemMatch: { coding: { $elemMatch: { code: category } } } },
     };
   }
 

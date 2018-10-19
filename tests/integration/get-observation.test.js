@@ -63,6 +63,28 @@ describe('Get Observation', () => {
     expect(res.body.entry[0].resource.subject.reference).toBe('Patient/123');
   });
 
+  it('allows user to query for all observations of a specific category', async () => {
+    await makeObservations(3);
+    await makeObservations(1, {
+      category: [
+        {
+          coding: [
+            {
+              system: 'http://hl7.org/fhir/observation-category',
+              code: 'vital-signs',
+              display: 'Vital Signs',
+            },
+          ],
+        },
+      ],
+    });
+    await makeObservations(3);
+
+    const res = await request(server).get('/fhir/Observation?category=vital-signs');
+    expect(res.status).toBe(200);
+    expect(res.body.entry.length).toBe(1);
+  });
+
   it('allows user to query for all observations of a specific code', async () => {
     await makeObservations(3);
     await makeObservations(1, {
