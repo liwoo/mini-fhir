@@ -31,14 +31,14 @@ describe('Get Observation', () => {
     await makeObservations(1, {
       value: 'valueString',
       valueString: 'Fever',
-      effectiveDate: now,
-      effective: 'effectiveDate',
+      effectiveDateTime: now,
+      effective: 'effectiveDateTime',
     });
 
     const res = await request(server).get('/fhir/Observation');
     expect(res.status).toBe(200);
     expect(res.body.entry[0].resource.valueString).toBe('Fever');
-    expect(res.body.entry[0].resource.effectiveDate).toBe(now.toISOString());
+    expect(res.body.entry[0].resource.effectiveDateTime).toBe(now.toISOString());
   });
 
   it('allows user to get specific observation', async () => {
@@ -105,13 +105,13 @@ describe('Get Observation', () => {
     const oldDate = new Date(Date.parse('1999-12-05'));
 
     await makeObservations(4, {
-      effectiveDate: new Date(),
-      effective: 'effectiveDate',
+      effectiveDateTime: new Date(),
+      effective: 'effectiveDateTime',
     });
 
     await makeObservations(1, {
-      effectiveDate: oldDate,
-      effective: 'effectiveDate',
+      effectiveDateTime: oldDate,
+      effective: 'effectiveDateTime',
     });
 
     const res = await request(server).get('/fhir/Observation?date=lt2001-01-01');
@@ -123,13 +123,13 @@ describe('Get Observation', () => {
     const oldDate = new Date(Date.parse('1999-12-05'));
 
     await makeObservations(3, {
-      effectiveDate: new Date(),
-      effecitve: 'effectiveDate',
+      effectiveDateTime: new Date(),
+      effecitve: 'effectiveDateTime',
     });
 
     await makeObservations(1, {
-      effectiveDate: oldDate,
-      effective: 'effectiveDate',
+      effectiveDateTime: oldDate,
+      effective: 'effectiveDateTime',
     });
 
     const res = await request(server).get('/fhir/Observation?date=gt2001-01-01');

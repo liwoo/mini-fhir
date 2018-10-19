@@ -24,6 +24,6 @@ app.use('/', (req, res) => res.send({
 }));
 app.use(err);
 
-const server = app.listen(4000, () => logger.info('Listening on Port 4000'));
+const server = app.listen(4002, () => logger.info('Listening on Port 4000'));
 
 module.exports = server;

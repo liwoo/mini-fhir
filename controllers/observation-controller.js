@@ -7,7 +7,7 @@ const { ValueQuantity } = require('../models/ValueQuantity');
 
 const sanitizeObservation = (obs) => {
   const {
-    _id,
+    id,
     value,
     effective,
     resourceType,
@@ -23,7 +23,7 @@ const sanitizeObservation = (obs) => {
   } = obs;
 
   return {
-    id: _id,
+    id,
     resourceType,
     code,
     category,
@@ -66,7 +66,7 @@ module.exports.findAll = async (req, res) => {
     const dateVal = date.slice(2);
     query = {
       ...query,
-      effectiveDate: { [getDateOperator(operator)]: dateVal },
+      effectiveDateTime: { [getDateOperator(operator)]: dateVal },
     };
   }
 
@@ -107,6 +107,7 @@ module.exports.findOne = async (req, res) => {
 
 module.exports.create = async (req, res) => {
   const {
+    id,
     subject,
     basedOn,
     context,
@@ -121,7 +122,7 @@ module.exports.create = async (req, res) => {
     valueCodableQuantity,
     valueString,
     valueBoolean,
-    effectiveDate,
+    effectiveDateTime,
     dataAbsentReason,
   } = req.body;
 
@@ -136,7 +137,7 @@ module.exports.create = async (req, res) => {
     return res.status(422).send(validation.error.details[0].message);
   }
 
-  if (effectiveDate) effective = 'effectiveDate';
+  if (effectiveDateTime) effective = 'effectiveDateTime';
   if (effectivePeriod) effective = 'effectivePeriod';
 
   if (valueQuantity) value = 'valueQuantity';
@@ -155,6 +156,7 @@ module.exports.create = async (req, res) => {
   }
 
   let observation = new Observation({
+    id,
     resourceType,
     subject: new Reference(subject),
     basedOn: new Reference(basedOn),
@@ -163,7 +165,7 @@ module.exports.create = async (req, res) => {
     effective,
     status,
     code: new CodableConcept(code),
-    effectiveDate,
+    effectiveDateTime,
     effectivePeriod: new EffectivePeriod(effectivePeriod),
     category: codableCategories,
     issued,
